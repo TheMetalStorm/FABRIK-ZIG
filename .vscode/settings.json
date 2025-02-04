@@ -1,6 +1,9 @@
 {
     "debug.allowBreakpointsEverywhere": true,
     "code-runner.runInTerminal": true,
+    "code-runner.executorMap":{
+        "zig": "zig build run #"
+    } ,
 
     // Zig
     "zig.zls.enabled": "on",
