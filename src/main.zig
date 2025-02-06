@@ -19,7 +19,6 @@ pub fn main() !void {
     }
 
     rl.initWindow(screenWidth, screenHeight, "FABRIK");
-    const target = rl.Vector2{ .x = screenWidth / 2 + 100, .y = screenHeight / 2 - 20 };
 
     defer rl.closeWindow();
 
@@ -29,10 +28,8 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.dark_gray); // Set background color (framebuffer clear color)
 
         const dists = try computeJointDistances(alloc, joints);
-        var allJointDistanceLength: f32 = 0;
-        for (dists.items) |value| {
-            allJointDistanceLength += value;
-        }
+        const target = rl.getMousePosition();
+        std.debug.print("{any}\n", .{target});
         stepJoints(joints, dists, target);
         drawJoints(joints);
     }
@@ -67,6 +64,19 @@ fn stepJoints(joints: ArrayList(Joint), dists: ArrayList(f32), target: rl.Vector
             joints.items[i + 1].position = oldPos
                 .multiply(rl.Vector2{ .x = 1.0 - lambda, .y = 1.0 - lambda })
                 .add(target.multiply(rl.Vector2{ .x = lambda, .y = lambda }));
+        }
+    } 
+    else {
+        const b = joints.items[0].position;
+        const difA = joints.items[joints.items.len - 1].position.distance(target);
+        var i = joints.items.len - 2;
+        while(i >= 0){
+            const pi = joints.items[i];
+            const pi1 = joints.items[i+1];
+
+            const r = pi.position.distance(pi1.position);
+
+            i--;
         }
     }
 }
