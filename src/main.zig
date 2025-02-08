@@ -13,8 +13,8 @@ pub fn main() !void {
     var joints = ArrayList(Joint).init(alloc);
     defer joints.deinit();
 
-    for (0..5) |i| {
-        const joint = Joint{ .position = rl.Vector2{ .x = @floatFromInt(screenWidth / 2 + i * 60), .y = @floatFromInt(screenHeight / 2) } };
+    for (0..10) |i| {
+        const joint = Joint{ .position = rl.Vector2{ .x = @floatFromInt(screenWidth / 2 + i * 20), .y = @floatFromInt(screenHeight / 2) } };
         try joints.append(joint);
     }
 
@@ -28,6 +28,7 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.dark_gray); // Set background color (framebuffer clear color)
 
         const dists = try computeJointDistances(alloc, joints);
+        defer dists.deinit();
 
         const target = rl.getMousePosition();
         stepJoints(joints, dists, target);
@@ -37,7 +38,6 @@ pub fn main() !void {
 
 fn computeJointDistances(alloc: std.mem.Allocator, joints: ArrayList(Joint)) !ArrayList(f32) {
     var dists = ArrayList(f32).init(alloc);
-    errdefer dists.deinit();
 
     for (0..joints.items.len - 1) |index| {
         const a = joints.items[index];
