@@ -17,9 +17,8 @@ pub fn main() !void {
         try a.append(joint);
     }
 
-    var solver = IKSolver.IKSolver.init(alloc, a);
+    var solver = try IKSolver.IKSolver.init(alloc, a);
     rl.initWindow(screenWidth, screenHeight, "FABRIK");
-
     defer rl.closeWindow();
 
     while (!rl.windowShouldClose()) {
@@ -27,11 +26,8 @@ pub fn main() !void {
         defer rl.endDrawing();
         rl.clearBackground(rl.Color.dark_gray); // Set background color (framebuffer clear color)
 
-        const dists = try solver.computeJointDistances(alloc);
-        //defer dists.deinit();
-
         const target = rl.getMousePosition();
-        solver.stepJoints(dists, target);
+        solver.stepJoints(target);
 
         const joints = try solver.getJoints();
         drawJoints(joints);

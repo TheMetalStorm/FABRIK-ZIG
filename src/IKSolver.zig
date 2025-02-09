@@ -9,24 +9,25 @@ pub const IKSolver = struct {
     const Self = @This();
     joints: ArrayList(Joint),
     alloc: std.mem.Allocator,
+    dists: ArrayList(f32),
 
-    pub fn init(alloc: std.mem.Allocator, joints: ArrayList(Joint)) Self {
-        return .{ .alloc = alloc, .joints = joints };
+    pub fn init(alloc: std.mem.Allocator, joints: ArrayList(Joint)) !Self {
+        return .{ .alloc = alloc, .joints = joints, .dists = try computeJointDistances(alloc, joints) };
     }
 
-    pub fn stepJoints(self: *Self, dists: ArrayList(f32), target: rl.Vector2) void {
+    pub fn stepJoints(self: *Self, target: rl.Vector2) void {
         const tolerance = 0.001;
 
         const distTarget = self.joints.items[0].position.distance(target);
         var allJointDistanceLength: f32 = 0;
-        for (dists.items) |value| {
+        for (self.dists.items) |value| {
             allJointDistanceLength += value;
         }
 
         if (distTarget > allJointDistanceLength) {
             for (self.joints.items[0 .. self.joints.items.len - 1], 0..) |*joint, i| {
                 const r: f32 = joint.position.distance(target);
-                const lambda: f32 = dists.items[i] / r;
+                const lambda: f32 = self.dists.items[i] / r;
                 self.joints.items[i + 1].position = self.joints.items[i].position
                     .scale(1.0 - lambda)
                     .add(target.scale(lambda));
@@ -44,7 +45,7 @@ pub const IKSolver = struct {
                     const pi1 = self.joints.items[j + 1];
 
                     const r = pi.position.distance(pi1.position);
-                    const lambda = dists.items[j] / r;
+                    const lambda = self.dists.items[j] / r;
 
                     self.joints.items[j].position = pi1.position
                         .scale(1 - lambda)
@@ -59,7 +60,7 @@ pub const IKSolver = struct {
                     const pi = self.joints.items[i];
                     const pi1 = self.joints.items[i + 1];
                     const r = pi.position.distance(pi1.position);
-                    const lambda = dists.items[i] / r;
+                    const lambda = self.dists.items[i] / r;
                     self.joints.items[i + 1].position = pi.position
                         .scale(1 - lambda)
                         .add(pi1.position.scale(lambda));
@@ -69,12 +70,12 @@ pub const IKSolver = struct {
         }
     }
 
-    pub fn computeJointDistances(self: *Self, alloc: std.mem.Allocator) !ArrayList(f32) {
+    pub fn computeJointDistances(alloc: std.mem.Allocator, joints: ArrayList(Joint)) !ArrayList(f32) {
         var dists = ArrayList(f32).init(alloc);
 
-        for (0..self.joints.items.len - 1) |index| {
-            const a = self.joints.items[index];
-            const b = self.joints.items[index + 1];
+        for (0..joints.items.len - 1) |index| {
+            const a = joints.items[index];
+            const b = joints.items[index + 1];
 
             try dists.append(a.position.distance(b.position));
         }
