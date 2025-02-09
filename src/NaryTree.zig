@@ -2,72 +2,93 @@ const std = @import("std");
 const ArrayList = std.ArrayList;
 
 test "Add And Remove Node Child" {
-    var node = try Node.create(std.testing.allocator, 1);
-    const child = try node.addChild(std.testing.allocator, 5);
-    try std.testing.expectEqual(1, node.children.items.len);
-    try std.testing.expectEqual(1, node.elem);
-    try std.testing.expectEqual(5, node.children.items[0].elem);
+    var tree = try NaryTree(f32).init(std.testing.allocator, 1);
+    const child = try tree.root.addChild(std.testing.allocator, 5);
+    try std.testing.expectEqual(1, tree.root.children.items.len);
+    try std.testing.expectEqual(1, tree.root.elem);
+    try std.testing.expectEqual(5, tree.root.children.items[0].elem);
 
-    node.removeChild(std.testing.allocator, child);
+    tree.root.removeChild(std.testing.allocator, child);
 
-    try std.testing.expectEqual(0, node.children.items.len);
+    try std.testing.expectEqual(0, tree.root.children.items.len);
 
-    node.deinit(std.testing.allocator);
+    tree.deinit();
 }
 
-pub const Node = struct {
-    const Self = @This();
+test "Deallocation of children " {
+    var tree = try NaryTree(f32).init(std.testing.allocator, 1);
+    const child = try tree.root.addChild(std.testing.allocator, 5);
+    const childsChild = try child.addChild(std.testing.allocator, 10);
+    const childsChildsChild = try childsChild.addChild(std.testing.allocator, 20);
+    _ = try childsChildsChild.addChild(std.testing.allocator, 50);
 
-    elem: f32,
-    children: ArrayList(*Self),
+    childsChild.removeChild(std.testing.allocator, childsChildsChild);
+    try std.testing.expectEqual(0, childsChild.children.items.len);
 
-    fn init(alloc: std.mem.Allocator, element: f32) Self {
-        const children = ArrayList(*Self).init(alloc);
+    tree.deinit();
+}
 
-        return .{ .elem = element, .children = children };
-    }
+pub fn Node(comptime T: type) type {
+    return struct {
+        const Self = @This();
 
-    pub fn create(alloc: std.mem.Allocator, element: f32) !*Self {
-        const node = try alloc.create(Self);
-        node.* = init(alloc, element);
-        return node;
-    }
+        elem: T,
+        children: ArrayList(*Self),
 
-    pub fn addChild(self: *Self, alloc: std.mem.Allocator, element: f32) !*Self {
-        const ptr = try Node.create(alloc, element);
-        try self.children.append(ptr);
-        return ptr;
-    }
+        fn init(alloc: std.mem.Allocator, element: T) Self {
+            const children = ArrayList(*Self).init(alloc);
 
-    pub fn removeChild(self: *Self, alloc: std.mem.Allocator, toRemove: *Self) void {
-        for (self.children.items, 0..) |item, i| {
-            if (item == toRemove) {
-                _ = self.children.swapRemove(i);
-                toRemove.deinit(alloc);
-                break;
+            return .{ .elem = element, .children = children };
+        }
+
+        pub fn create(alloc: std.mem.Allocator, element: T) !*Self {
+            const node = try alloc.create(Self);
+            node.* = init(alloc, element);
+            return node;
+        }
+
+        pub fn addChild(self: *Self, alloc: std.mem.Allocator, element: T) !*Self {
+            const ptr = try Self.create(alloc, element);
+            try self.children.append(ptr);
+            return ptr;
+        }
+
+        pub fn hasChildren(self: *Self) bool {
+            return self.children.items.len > 0;
+        }
+
+        pub fn removeChild(self: *Self, alloc: std.mem.Allocator, toRemove: *Self) void {
+            for (self.children.items, 0..) |item, i| {
+                if (item == toRemove) {
+                    _ = self.children.swapRemove(i);
+                    toRemove.deinit(alloc);
+                    break;
+                }
             }
         }
-    }
 
-    pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
-        for (self.children.items) |item| {
-            item.deinit(alloc);
+        pub fn deinit(self: *Self, alloc: std.mem.Allocator) void {
+            for (self.children.items) |item| {
+                item.deinit(alloc);
+            }
+            self.children.deinit();
+            alloc.destroy(self);
         }
-        self.children.deinit();
-        alloc.destroy(self);
-    }
-};
+    };
+}
+pub fn NaryTree(comptime T: type) type {
+    return struct {
+        const Self = @This();
+        root: *Node(T),
+        allocator: std.mem.Allocator,
 
-pub const NaryTree = struct {
-    const Self = @This();
-    root: ?*Node,
-    allocator: std.mem.Allocator,
+        fn init(alloc: std.mem.Allocator, rootElement: T) !Self {
+            const root = try Node(T).create(alloc, rootElement);
+            return .{ .root = root, .allocator = alloc };
+        }
 
-    fn init(alloc: std.mem.Allocator) Self {
-        return .{ .root = null, .allocator = alloc };
-    }
-
-    fn addRoot(self: *Self, elem: f32) !void {
-        self.root = Node.create(self.allocator, elem);
-    }
-};
+        fn deinit(self: *Self) void {
+            self.root.deinit(self.allocator);
+        }
+    };
+}
