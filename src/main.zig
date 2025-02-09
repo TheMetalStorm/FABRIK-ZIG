@@ -1,6 +1,7 @@
 const std = @import("std");
 const rl = @import("raylib");
 const ArrayList = std.ArrayList;
+const NaryTree = @import("./NaryTree.zig");
 
 const Joint = struct { position: rl.Vector2 };
 pub fn main() !void {
