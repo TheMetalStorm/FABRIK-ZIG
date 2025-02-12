@@ -1,9 +1,6 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
-//TODO: factor out rl
-const rl = @import("raylib");
-
-pub const Joint = struct { position: rl.Vector2 };
+const Vector2 = @import("raylib").Vector2;
 
 pub const IKSolver = struct {
     const Self = @This();
@@ -11,11 +8,12 @@ pub const IKSolver = struct {
     alloc: std.mem.Allocator,
     dists: ArrayList(f32),
 
+    pub const Joint = struct { position: Vector2 };
     pub fn init(alloc: std.mem.Allocator, joints: ArrayList(Joint)) !Self {
         return .{ .alloc = alloc, .joints = joints, .dists = try computeJointDistances(alloc, joints) };
     }
 
-    pub fn stepJoints(self: *Self, target: rl.Vector2) void {
+    pub fn stepJoints(self: *Self, target: Vector2) void {
         const tolerance = 0.001;
 
         const distTarget = self.joints.items[0].position.distance(target);
@@ -46,9 +44,8 @@ pub const IKSolver = struct {
 
                     const r = pi.position.distance(pi1.position);
                     const lambda = self.dists.items[j] / r;
-
                     self.joints.items[j].position = pi1.position
-                        .scale(1 - lambda)
+                        .scale(1.0 - lambda)
                         .add(pi.position.scale(lambda));
 
                     if (j == 0) break;
