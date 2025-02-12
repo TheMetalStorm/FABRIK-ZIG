@@ -1,7 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const NaryTree = @import("NaryTree.zig");
-const IKSolver = @import("IKSolver.zig");
+const IKSolver = @import("IKSolver.zig").IKSolver;
 const rl = @import("raylib");
 
 pub fn main() !void {
@@ -13,11 +13,13 @@ pub fn main() !void {
 
     var a = ArrayList(IKSolver.Joint).init(alloc);
     for (0..10) |i| {
-        const joint = IKSolver.Joint{ .position = rl.Vector2{ .x = @floatFromInt(screenWidth / 2 + i * 20), .y = @floatFromInt(screenHeight / 2) } };
+        const joint = IKSolver.Joint{ .position = rl.Vector2.init(@floatFromInt(screenWidth / 2 + i * 20), @floatFromInt(screenHeight / 2)) };
         try a.append(joint);
     }
 
-    var solver = try IKSolver.IKSolver.init(alloc, a);
+    //Build NaryTree
+
+    var solver = try IKSolver.init(alloc, a);
     rl.initWindow(screenWidth, screenHeight, "FABRIK");
     defer rl.closeWindow();
 
@@ -25,11 +27,12 @@ pub fn main() !void {
         rl.beginDrawing();
         defer rl.endDrawing();
         rl.clearBackground(rl.Color.dark_gray); // Set background color (framebuffer clear color)
-
         const target = rl.getMousePosition();
         solver.stepJoints(target);
 
         const joints = try solver.getJoints();
+        defer joints.deinit();
+
         drawJoints(joints);
     }
 }
